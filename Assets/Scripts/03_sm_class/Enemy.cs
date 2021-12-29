@@ -20,6 +20,10 @@ namespace Sample03
         {
             return stageManager.homeTransform.position;
         }
+        private GameObject GetFishPrefab()
+        {
+            return stageManager.fishPrefab;
+        }
         
         /// <summary>
         /// ステート定義
@@ -96,13 +100,14 @@ namespace Sample03
             {
                 Debug.Log("start hunting");
                 // 採取スタート
-                Owner.HuntStart();
+                _isFinishHunting = false;
+                MonoBehaviorHandler.StartStaticCoroutine(HuntCoroutine());
             }
 
             public override void OnUpdate()
             {
                 // 採取が完了したら次のステートへ
-                if (Owner.IsFinishHunting())
+                if (_isFinishHunting)
                 {
                     StateMachine.ChangeState((int) StateType.MoveHome);
                 }
@@ -112,39 +117,22 @@ namespace Sample03
             {
                 Debug.Log("end hunting");
             }
-        }
-        
-        /// <summary>
-        /// 採取が完了しているか？
-        /// </summary>
-        private bool _isFinishHunting;
-        private bool IsFinishHunting()
-        {
-            return _isFinishHunting;
-        }
-
-        /// <summary>
-        /// 採取開始
-        /// </summary>
-        private void HuntStart()
-        {
-            _isFinishHunting = false;
-            StartCoroutine(HuntCoroutine());
-        }
-
-        /// <summary>
-        /// 採取コルーチン
-        /// </summary>
-        private IEnumerator HuntCoroutine()
-        {
-            // 狩猟中、数秒待機
-            yield return new WaitForSeconds(2.0f);
-
-            // 魚取得
-            Instantiate(stageManager.fishPrefab, transform);
             
-            // 狩猟完了
-            _isFinishHunting = true;
+            // 採取が完了しているか？
+            private bool _isFinishHunting;
+            
+            // 採取コルーチン
+            private IEnumerator HuntCoroutine()
+            {
+                // 狩猟中、数秒待機
+                yield return new WaitForSeconds(2.0f);
+
+                // 魚取得
+                Instantiate(Owner.GetFishPrefab(), Owner.transform);
+            
+                // 狩猟完了
+                _isFinishHunting = true;
+            }
         }
 
         // ----- move home -----
@@ -185,8 +173,9 @@ namespace Sample03
             public override void OnStart()
             {
                 Debug.Log("start eating");
-                // 待機開始
-                Owner.EatStart();
+                // 食事開始
+                _isFinishEating = false;
+                MonoBehaviorHandler.StartStaticCoroutine(EatCoroutine());
             }
 
             public override void OnUpdate()
@@ -195,54 +184,35 @@ namespace Sample03
                 Owner.transform.Rotate(Vector3.up * 500.0f * Time.deltaTime);
                 
                 // 食事が完了したら次のステートへ
-                if (Owner.IsFinishEating())
+                if (_isFinishEating)
                 {
                     StateMachine.ChangeState((int) StateType.MoveSea);
                 }
-                
             }
 
             public override void OnEnd()
             {
                 Debug.Log("end eating");
             }
-        }
-        
-        /// <summary>
-        /// 食事が完了しているか？
-        /// </summary>
-        private bool _isFinishEating;
-        private bool IsFinishEating()
-        {
-            return _isFinishEating;
-        }
-        
-        /// <summary>
-        /// 食事開始
-        /// </summary>
-        private void EatStart()
-        {
-            _isFinishEating = false;
-            StartCoroutine(EatCoroutine());
-        }
-
-        /// <summary>
-        /// 食事コルーチン
-        /// </summary>
-        private IEnumerator EatCoroutine()
-        {
-            // 食事中、数秒待機
-            yield return new WaitForSeconds(5.0f);
-
-            // 食事終了
-            // 子オブジェクト(魚)を破棄
-            foreach (Transform child in transform)
-            {
-                Destroy(child.gameObject);
-            }
             
-            // 食事完了
-            _isFinishEating = true;
+            // 食事が完了しているか？
+            private bool _isFinishEating;
+            
+            // 食事コルーチン
+            private IEnumerator EatCoroutine()
+            {
+                // 食事中、数秒待機
+                yield return new WaitForSeconds(5.0f);
+                
+                // 子オブジェクト(魚)を破棄
+                foreach (Transform child in Owner.transform)
+                {
+                    Destroy(child.gameObject);
+                }
+            
+                // 食事完了
+                _isFinishEating = true;
+            }
         }
     }
 }
