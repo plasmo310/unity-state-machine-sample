@@ -25,6 +25,7 @@ namespace Sample05
             Hunting,  // 魚採取
             MoveHome, // 家へ移動
             Eating,   // 食事
+            Looking,  // 眺める
         }
         private StateMachine<Enemy> _stateMachine;
 
@@ -41,6 +42,7 @@ namespace Sample05
             _stateMachine.Add<StateHunting>((int) StateType.Hunting);
             _stateMachine.Add<StateMoveHome>((int) StateType.MoveHome);
             _stateMachine.Add<StateEating>((int) StateType.Eating);
+            _stateMachine.Add<StateLooking>((int) StateType.Looking);
             // ステート開始
             _stateMachine.OnStart((int) StateType.MoveSea);
         }
@@ -148,7 +150,7 @@ namespace Sample05
                         {
                             Owner.stageManager.honey.ReceiveFish(child.gameObject);
                         }
-                        StateMachine.ChangeState((int) StateType.MoveSea);
+                        StateMachine.ChangeState((int) StateType.Looking);
                         return;
                     }
                     // いなかったら自分で食べる
@@ -212,6 +214,43 @@ namespace Sample05
             
                 // 食事完了
                 _isFinishEating = true;
+            }
+        }
+        
+        // ----- looking -----
+        private class StateLooking : StateBase
+        {
+            public override void OnStart()
+            {
+                Debug.Log("<color=aqua>**kanio** 眺めます</color>");
+                // 眺める開始
+                _isFinishLooking = false;
+                MonoBehaviorHandler.StartStaticCoroutine(LookCoroutine());
+            }
+
+            public override void OnUpdate()
+            {
+                // 眺めるのが完了したら次のステートへ
+                if (_isFinishLooking)
+                {
+                    StateMachine.ChangeState((int) StateType.MoveSea);
+                }
+            }
+
+            public override void OnEnd()
+            {
+            }
+            
+            // 眺めるのが完了しているか？
+            private bool _isFinishLooking;
+            
+            // 眺めるコルーチン
+            private IEnumerator LookCoroutine()
+            {
+                // 数秒待機
+                yield return new WaitForSeconds(2.0f);
+                // 眺める完了
+                _isFinishLooking = true;
             }
         }
     }
