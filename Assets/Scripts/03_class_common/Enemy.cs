@@ -3,14 +3,13 @@ using UnityEngine;
 
 namespace Sample03
 {
-    using State = StateMachine<Enemy>.State;
+    using StateBase = StateMachine<Enemy>.StateBase;
     
-    /// <summary>
-    /// Enemyクラス
-    /// StateMachineを使用したステート遷移
-    /// </summary>
     public class Enemy : MonoBehaviour
     {
+        /// <summary>
+        /// ステート定義
+        /// </summary>
         private enum StateType
         {
             Wait,  // 待機
@@ -18,29 +17,32 @@ namespace Sample03
             Sleep, // 寝る
         }
         private StateMachine<Enemy> _stateMachine;
-        
+
+        private void Start()
+        {
+            // ステートマシン定義
+            _stateMachine = new StateMachine<Enemy>(this);
+            _stateMachine.Add<StateWait>((int) StateType.Wait);
+            _stateMachine.Add<StateMove>((int) StateType.Move);
+            _stateMachine.Add<StateSleep>((int) StateType.Sleep);
+            // ステート開始
+            _stateMachine.OnStart((int) StateType.Wait);
+        }
+
         private void Awake()
         {
             Debug.Log("start sample03!!");
         }
 
-        private void Start()
-        {
-            // StateMachine定義
-            _stateMachine = new StateMachine<Enemy>(this);
-            _stateMachine.AddTransition<StateSleep, StateWait>((int) StateType.Wait);
-            _stateMachine.AddTransition<StateWait, StateMove>((int) StateType.Move);
-            _stateMachine.AddTransition<StateMove, StateSleep>((int) StateType.Sleep);
-            _stateMachine.Start<StateWait>();
-        }
-
         private void Update()
         {
-            _stateMachine.Update();
+            // ステート更新
+            _stateMachine.OnUpdate();
         }
 
+        // 各ステート処理
         // ----- wait -----
-        private class StateWait : State
+        private class StateWait : StateBase
         {
             private const float ChangeTime = 3.0f;
             private float _countTime = 0.0f;
@@ -68,7 +70,7 @@ namespace Sample03
         }
         
         // ----- move -----
-        private class StateMove : State
+        private class StateMove : StateBase
         {
             private const float ChangeTime = 3.0f;
             private float _countTime = 0.0f;
@@ -96,7 +98,7 @@ namespace Sample03
         }
         
         // ----- sleep -----
-        private class StateSleep : State
+        private class StateSleep : StateBase
         {
             private const float ChangeTime = 3.0f;
             private float _countTime = 0.0f;

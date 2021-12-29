@@ -2,11 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Sample03
+namespace Sample04
 {
     /// <summary>
     /// ステートマシンクラス
-    /// 有限オートマトンの遷移も定義する
+    /// 状態遷移の定義版
     /// </summary>
     public class StateMachine<TOwner>
     {
@@ -14,19 +14,18 @@ namespace Sample03
         /// ステート基底クラス
         /// 各ステートクラスはこのクラスを継承する
         /// </summary>
-        public abstract class State
+        public abstract class StateBase
         {
             public StateMachine<TOwner> StateMachine;
-            public readonly Dictionary<int, State> Transitions = new Dictionary<int, State>();
-            protected TOwner Owner => StateMachine.Owner;
+            public readonly Dictionary<int, StateBase> Transitions = new Dictionary<int, StateBase>(); // ステート遷移情報
             
             public virtual void OnStart() { }
             public virtual void OnUpdate() { }
             public virtual void OnEnd() { }
         }
         private TOwner Owner { get; } // StateMachineを持つOwner
-        private State CurrentState { get; set; } // 現在のステート
-        private readonly LinkedList<State> _states = new LinkedList<State>(); // 全てのステート定義
+        private StateBase _currentState; // 現在のステート
+        private readonly LinkedList<StateBase> _states = new LinkedList<StateBase>(); // 全てのステート定義
 
         /// <summary>
         /// コンストラクタ
@@ -39,7 +38,7 @@ namespace Sample03
         /// <summary>
         /// ステート追加
         /// </summary>
-        private T Add<T>() where T : State, new()
+        private T Add<T>() where T : StateBase, new()
         {
             // ステートを追加
             var newState = new T
@@ -53,7 +52,7 @@ namespace Sample03
         /// <summary>
         /// ステート取得、無ければ追加
         /// </summary>
-        private T GetOrAdd<T>() where T : State, new()
+        private T GetOrAdd<T>() where T : StateBase, new()
         {
             // 追加されていれば返却
             foreach (var state in _states)
@@ -68,44 +67,35 @@ namespace Sample03
         }
 
         /// <summary>
-        /// 遷移トランジション追加
+        /// イベントIDに対応した遷移情報を登録する
         /// </summary>
-        /// <param name="stateId">ステートID</param>
+        /// <param name="eventId">イベントID</param>
         /// <typeparam name="TFrom">遷移元ステート</typeparam>
         /// <typeparam name="TTo">遷移先ステート</typeparam>
-        public void AddTransition<TFrom, TTo>(int stateId)
-            where TFrom : State, new()
-            where TTo : State, new()
+        public void AddTransition<TFrom, TTo>(int eventId)
+            where TFrom : StateBase, new()
+            where TTo : StateBase, new()
         {
-            var from = GetOrAdd<TFrom>();
-            var to = GetOrAdd<TTo>();
             // 既にイベントIDが登録済ならエラー
-            if (from.Transitions.ContainsKey(stateId))
+            var from = GetOrAdd<TFrom>();
+            if (from.Transitions.ContainsKey(eventId))
             {
-                Debug.LogError("already register transition.");
+                Debug.LogError("already register eventId!! : " + eventId);
                 return;
             }
             // 指定のイベントIDで追加する
-            from.Transitions.Add(stateId, to);
-        }
-
-        /// <summary>
-        /// AnyStateからの遷移トランジション追加
-        /// </summary>
-        private sealed class AnyState : State { }
-        public void AddAnyTransition<TTo>(int eventId) where TTo : State, new()
-        {
-            AddTransition<AnyState, TTo>(eventId);
+            var to = GetOrAdd<TTo>();
+            from.Transitions.Add(eventId, to);
         }
 
         /// <summary>
         /// ステート開始処理
         /// </summary>
         /// <typeparam name="T">開始するステート</typeparam>
-        public void Start<T>() where T : State, new()
+        public void Start<T>() where T : StateBase, new()
         {
-            CurrentState = GetOrAdd<T>();
-            CurrentState.OnStart();
+            _currentState = GetOrAdd<T>();
+            _currentState.OnStart();
         }
 
         /// <summary>
@@ -113,26 +103,25 @@ namespace Sample03
         /// </summary>
         public void Update()
         {
-            CurrentState.OnUpdate();
+            _currentState.OnUpdate();
         }
 
         /// <summary>
         /// 指定されたIDのステートに切り替える
         /// </summary>
-        /// <param name="stateId">ステートID</param>
-        public void ChangeState(int stateId)
+        /// <param name="eventId">イベントID</param>
+        public void ChangeState(int eventId)
         {
             // イベントIDからステート取得
-            if (!CurrentState.Transitions.TryGetValue(stateId, out var nextState) 
-                && !GetOrAdd<AnyState>().Transitions.TryGetValue(stateId, out nextState))
+            if (!_currentState.Transitions.TryGetValue(eventId, out var nextState))
             {
-                Debug.Log("not found eventId.");
+                Debug.LogError("not found eventId!! : " + eventId);
                 return;
             }
             // ステートを切り替える
-            CurrentState.OnEnd();
+            _currentState.OnEnd();
             nextState.OnStart();
-            CurrentState = nextState;
+            _currentState = nextState;
         }
     }
 }
