@@ -17,6 +17,7 @@ namespace Sample03
         public abstract class StateBase
         {
             public StateMachine<TOwner> StateMachine;
+            protected TOwner Owner => StateMachine.Owner;
 
             public virtual void OnStart() { }
             public virtual void OnUpdate() { }
