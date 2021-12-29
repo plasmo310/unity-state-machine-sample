@@ -12,16 +12,22 @@ namespace Sample01
     public class Enemy : MonoBehaviour
     {
         /// <summary>
+        /// ステージ管理クラス
+        /// </summary>
+        [SerializeField] private StageManager stageManager;
+        
+        /// <summary>
         /// ステート
         /// </summary>
-        private enum State
+        private enum StateType
         {
-            Wait, // 待機
-            Move, // 動く
-            Sleep, // 寝る
+            MoveSea,  // 海へ移動
+            Hunting,  // 魚採取
+            MoveHome, // 家へ移動
+            Eating,   // 食事
         }
-        private State _state = State.Wait; // 現在のステート
-        private State _nextState = State.Wait; // 次のステート
+        private StateType _state = StateType.MoveSea;     // 現在のステート
+        private StateType _nextState = StateType.MoveSea; // 次のステート
 
         private void Awake()
         {
@@ -30,7 +36,8 @@ namespace Sample01
 
         private void Start()
         {
-            WaitStart();
+            // 最初のステートを開始する
+            MoveSeaStart();
         }
 
         private void Update()
@@ -38,14 +45,17 @@ namespace Sample01
             // 現在のステートのUpdateを呼び出す
             switch (_state)
             {
-                case State.Wait:
-                    WaitUpdate();
+                case StateType.MoveSea:
+                    MoveSeaUpdate();
                     break;
-                case State.Move:
-                    MoveUpdate();
+                case StateType.Hunting:
+                    HuntingUpdate();
                     break;
-                case State.Sleep:
-                    SleepUpdate();
+                case StateType.MoveHome:
+                    MoveHomeUpdate();
+                    break;
+                case StateType.Eating:
+                    EatingUpdate();
                     break;
             }
 
@@ -55,14 +65,17 @@ namespace Sample01
                 // 終了処理を呼び出して
                 switch (_state)
                 {
-                    case State.Wait:
-                        WaitEnd();
+                    case StateType.MoveSea:
+                        MoveSeaEnd();
                         break;
-                    case State.Move:
-                        MoveEnd();
+                    case StateType.Hunting:
+                        HuntingEnd();
                         break;
-                    case State.Sleep:
-                        SleepEnd();
+                    case StateType.MoveHome:
+                        MoveHomeEnd();
+                        break;
+                    case StateType.Eating:
+                        EatingEnd();
                         break;
                 }
 
@@ -70,14 +83,17 @@ namespace Sample01
                 _state = _nextState;
                 switch (_state)
                 {
-                    case State.Wait:
-                        WaitStart();
+                    case StateType.MoveSea:
+                        MoveSeaStart();
                         break;
-                    case State.Move:
-                        MoveStart();
+                    case StateType.Hunting:
+                        HuntingStart();
                         break;
-                    case State.Sleep:
-                        SleepStart();
+                    case StateType.MoveHome:
+                        MoveHomeStart();
+                        break;
+                    case StateType.Eating:
+                        EatingStart();
                         break;
                 }
             }
@@ -87,79 +103,152 @@ namespace Sample01
         /// 遷移先のステート設定
         /// </summary>
         /// <param name="nextState">次のステート</param>
-        private void ChangeState(State nextState)
+        private void ChangeState(StateType nextState)
         {
             _nextState = nextState;
         }
 
-        private const float ChangeStateTime = 3.0f; // ステート切替時間
-        private float _countTime = 0.0f; // 時間カウント用
-
         // 各ステート処理
-        // ----- wait -----
-        private void WaitStart()
+        // ----- move sea -----
+        private void MoveSeaStart()
         {
-            Debug.Log("start wait");
+            Debug.Log("start move sea");
         }
 
-        private void WaitUpdate()
+        private void MoveSeaUpdate()
         {
-            // Wait -> Move
-            _countTime += Time.deltaTime;
-            if (_countTime > ChangeStateTime)
+            var enemyPosition = transform.position;
+            var targetPosition = stageManager.seaTransform.position;
+            // 海へ到着したら次のステートへ
+            if (Vector3.Distance(enemyPosition, targetPosition) < 0.5f)
             {
-                ChangeState(State.Move);
-                _countTime = 0.0f;
+                ChangeState(StateType.Hunting);
+                return;
+            }
+            // 海へ向かう
+            transform.position = Vector3.MoveTowards(
+                enemyPosition,
+                targetPosition, 
+                5.0f * Time.deltaTime);
+            transform.LookAt(targetPosition);
+        }
+
+        private void MoveSeaEnd()
+        {
+            Debug.Log("end move sea");
+        }
+        
+        // ----- hunting -----
+        private void HuntingStart()
+        {
+            Debug.Log("start hunting");
+            // 採取スタート
+            _isFinishHunting = false;
+            StartCoroutine(HuntCoroutine());
+        }
+
+        private void HuntingUpdate()
+        {
+            // 採取が完了したら次のステートへ
+            if (_isFinishHunting)
+            {
+                ChangeState(StateType.MoveHome);
             }
         }
 
-        private void WaitEnd()
+        private void HuntingEnd()
         {
-            Debug.Log("end wait");
+            Debug.Log("end hunting");
+        }
+        
+        // 採取が完了しているか？
+        private bool _isFinishHunting;
+        
+        // 採取コルーチン
+        private IEnumerator HuntCoroutine()
+        {
+            // 狩猟中、数秒待機
+            yield return new WaitForSeconds(2.0f);
+
+            // 魚取得
+            Instantiate(stageManager.fishPrefab, transform);
+            
+            // 狩猟完了
+            _isFinishHunting = true;
+        }
+        
+        // ----- move home -----
+        private void MoveHomeStart()
+        {
+            Debug.Log("start move home");
         }
 
-        // ----- move -----
-        private void MoveStart()
+        private void MoveHomeUpdate()
         {
-            Debug.Log("start move");
-        }
-
-        private void MoveUpdate()
-        {
-            // Move -> Sleep
-            _countTime += Time.deltaTime;
-            if (_countTime > ChangeStateTime)
+            var enemyPosition = transform.position;
+            var targetPosition = stageManager.homeTransform.position;
+            // 家へ到着したら次のステートへ
+            if (Vector3.Distance(enemyPosition, targetPosition) < 0.5f)
             {
-                ChangeState(State.Sleep);
-                _countTime = 0.0f;
+                ChangeState(StateType.Eating);
+                return;
+            }
+            // 家へ向かう
+            transform.position = Vector3.MoveTowards(
+                enemyPosition,
+                targetPosition, 
+                5.0f * Time.deltaTime);
+            transform.LookAt(targetPosition);
+        }
+
+        private void MoveHomeEnd()
+        {
+            Debug.Log("end move home");
+        }
+        
+        // ----- eating -----
+        private void EatingStart()
+        {
+            Debug.Log("start eating");
+            // 食事開始
+            _isFinishEating = false;
+            StartCoroutine(EatCoroutine());
+        }
+
+        private void EatingUpdate()
+        {
+            // くるくる周る
+            transform.Rotate(Vector3.up * 500.0f * Time.deltaTime);
+                
+            // 食事が完了したら次のステートへ
+            if (_isFinishEating)
+            {
+                ChangeState(StateType.MoveSea);
             }
         }
 
-        private void MoveEnd()
+        private void EatingEnd()
         {
-            Debug.Log("end move");
+            Debug.Log("end eating");
         }
-
-        // ----- sleep -----
-        private void SleepStart()
+        
+        // 食事が完了しているか？
+        private bool _isFinishEating;
+            
+        // 食事コルーチン
+        private IEnumerator EatCoroutine()
         {
-            Debug.Log("start sleep");
-        }
-
-        private void SleepUpdate()
-        {
-            // Sleep -> Wait
-            _countTime += Time.deltaTime;
-            if (_countTime > ChangeStateTime)
+            // 食事中、数秒待機
+            yield return new WaitForSeconds(5.0f);
+                
+            // 子オブジェクト(魚)を破棄
+            foreach (Transform child in transform)
             {
-                ChangeState(State.Wait);
-                _countTime = 0.0f;
+                Destroy(child.gameObject);
             }
-        }
-
-        private void SleepEnd()
-        {
-            Debug.Log("end sleep");
+            
+            // 食事完了
+            _isFinishEating = true;
         }
     }
 }

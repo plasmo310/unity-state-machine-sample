@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 namespace Sample04
@@ -7,18 +8,24 @@ namespace Sample04
     
     /// <summary>
     /// Enemyクラス
-    /// StateMachineを使用したステート遷移
+    /// StateMachine(状態遷移版)
     /// </summary>
     public class Enemy : MonoBehaviour
     {
+        /// <summary>
+        /// ステージ管理クラス
+        /// </summary>
+        [SerializeField] private StageManager stageManager;
+
         /// <summary>
         /// ステート定義
         /// </summary>
         private enum EventType
         {
-            Wait,  // 待機
-            Move,  // 動く
-            Sleep, // 寝る
+            MoveSea,  // 海へ移動
+            Hunting,  // 魚採取
+            MoveHome, // 家へ移動
+            Eating,   // 食事
         }
         private StateMachine<Enemy> _stateMachine;
         
@@ -31,101 +38,172 @@ namespace Sample04
         {
             // ステートマシン定義
             _stateMachine = new StateMachine<Enemy>(this);
-            _stateMachine.AddTransition<StateSleep, StateWait>((int) EventType.Wait);
-            _stateMachine.AddTransition<StateWait, StateMove>((int) EventType.Move);
-            _stateMachine.AddTransition<StateMove, StateSleep>((int) EventType.Sleep);
+            _stateMachine.AddTransition<StateEating, StateMoveSea>((int) EventType.MoveSea);
+            _stateMachine.AddTransition<StateMoveSea, StateHunting>((int) EventType.Hunting);
+            _stateMachine.AddTransition<StateHunting, StateMoveHome>((int) EventType.MoveHome);
+            _stateMachine.AddTransition<StateMoveHome, StateEating>((int) EventType.Eating);
             // ステート開始
-            _stateMachine.Start<StateWait>();
+            _stateMachine.OnStart<StateMoveSea>();
         }
 
         private void Update()
         {
             // ステート更新
-            _stateMachine.Update();
+            _stateMachine.OnUpdate();
         }
 
         // 各ステート処理
-        // ----- wait -----
-        private class StateWait : StateBase
+        // ----- move sea -----
+        private class StateMoveSea : StateBase
         {
-            private const float ChangeTime = 3.0f;
-            private float _countTime = 0.0f;
-
             public override void OnStart()
             {
-                Debug.Log("start wait");
-                _countTime = 0.0f;
+                Debug.Log("start move sea");
             }
 
             public override void OnUpdate()
             {
-                // wait -> move
-                _countTime += Time.deltaTime;
-                if (_countTime > ChangeTime)
+                var enemyPosition = Owner.transform.position;
+                var targetPosition = Owner.stageManager.seaTransform.position;
+                // 海へ到着したら次のステートへ
+                if (Vector3.Distance(enemyPosition, targetPosition) < 0.5f)
                 {
-                    StateMachine.ChangeState((int) EventType.Move);
+                    StateMachine.ChangeState((int) EventType.Hunting);
+                    return;
                 }
+                // 海へ向かう
+                Owner.transform.position = Vector3.MoveTowards(
+                    enemyPosition,
+                    targetPosition, 
+                    5.0f * Time.deltaTime);
+                Owner.transform.LookAt(targetPosition);
             }
 
             public override void OnEnd()
             {
-                Debug.Log("end wait");
+                Debug.Log("end move sea");
             }
         }
-        
-        // ----- move -----
-        private class StateMove : StateBase
+
+        // ----- hunting -----
+        private class StateHunting : StateBase
         {
-            private const float ChangeTime = 3.0f;
-            private float _countTime = 0.0f;
-            
             public override void OnStart()
             {
-                Debug.Log("start move");
-                _countTime = 0.0f;
+                Debug.Log("start hunting");
+                // 採取スタート
+                _isFinishHunting = false;
+                MonoBehaviorHandler.StartStaticCoroutine(HuntCoroutine());
             }
 
             public override void OnUpdate()
             {
-                // wait -> move
-                _countTime += Time.deltaTime;
-                if (_countTime > ChangeTime)
+                // 採取が完了したら次のステートへ
+                if (_isFinishHunting)
                 {
-                    StateMachine.ChangeState((int) EventType.Sleep);
+                    StateMachine.ChangeState((int) EventType.MoveHome);
                 }
             }
 
             public override void OnEnd()
             {
-                Debug.Log("end move");
+                Debug.Log("end hunting");
+            }
+            
+            // 採取が完了しているか？
+            private bool _isFinishHunting;
+            
+            // 採取コルーチン
+            private IEnumerator HuntCoroutine()
+            {
+                // 狩猟中、数秒待機
+                yield return new WaitForSeconds(2.0f);
+
+                // 魚取得
+                Instantiate(Owner.stageManager.fishPrefab, Owner.transform);
+            
+                // 狩猟完了
+                _isFinishHunting = true;
             }
         }
-        
-        // ----- sleep -----
-        private class StateSleep : StateBase
+
+        // ----- move home -----
+        private class StateMoveHome : StateBase
         {
-            private const float ChangeTime = 3.0f;
-            private float _countTime = 0.0f;
-            
             public override void OnStart()
             {
-                Debug.Log("start sleep");
-                _countTime = 0.0f;
+                Debug.Log("start move home");
             }
 
             public override void OnUpdate()
             {
-                // sleep -> wait
-                _countTime += Time.deltaTime;
-                if (_countTime > ChangeTime)
+                var enemyPosition = Owner.transform.position;
+                var targetPosition = Owner.stageManager.homeTransform.position;
+                // 家へ到着したら次のステートへ
+                if (Vector3.Distance(enemyPosition, targetPosition) < 0.5f)
                 {
-                    StateMachine.ChangeState((int) EventType.Wait);
+                    StateMachine.ChangeState((int) EventType.Eating);
+                    return;
+                }
+                // 家へ向かう
+                Owner.transform.position = Vector3.MoveTowards(
+                    enemyPosition,
+                    targetPosition, 
+                    5.0f * Time.deltaTime);
+                Owner.transform.LookAt(targetPosition);
+            }
+
+            public override void OnEnd()
+            {
+                Debug.Log("end move home");
+            }
+        }
+
+        // ----- eating -----
+        private class StateEating : StateBase
+        {
+            public override void OnStart()
+            {
+                Debug.Log("start eating");
+                // 食事開始
+                _isFinishEating = false;
+                MonoBehaviorHandler.StartStaticCoroutine(EatCoroutine());
+            }
+
+            public override void OnUpdate()
+            {
+                // くるくる周る
+                Owner.transform.Rotate(Vector3.up * 500.0f * Time.deltaTime);
+                
+                // 食事が完了したら次のステートへ
+                if (_isFinishEating)
+                {
+                    StateMachine.ChangeState((int) EventType.MoveSea);
                 }
             }
 
             public override void OnEnd()
             {
-                Debug.Log("end sleep");
+                Debug.Log("end eating");
+            }
+            
+            // 食事が完了しているか？
+            private bool _isFinishEating;
+            
+            // 食事コルーチン
+            private IEnumerator EatCoroutine()
+            {
+                // 食事中、数秒待機
+                yield return new WaitForSeconds(5.0f);
+                
+                // 子オブジェクト(魚)を破棄
+                foreach (Transform child in Owner.transform)
+                {
+                    Destroy(child.gameObject);
+                }
+            
+                // 食事完了
+                _isFinishEating = true;
             }
         }
     }

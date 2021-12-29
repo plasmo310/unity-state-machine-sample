@@ -17,19 +17,21 @@ namespace Sample04
         public abstract class StateBase
         {
             public StateMachine<TOwner> StateMachine;
+            protected TOwner Owner => StateMachine.Owner;
             public readonly Dictionary<int, StateBase> Transitions = new Dictionary<int, StateBase>(); // ステート遷移情報
             
             public virtual void OnStart() { }
             public virtual void OnUpdate() { }
             public virtual void OnEnd() { }
         }
-        private TOwner Owner { get; } // StateMachineを持つOwner
+        private TOwner Owner { get; }
         private StateBase _currentState; // 現在のステート
         private readonly LinkedList<StateBase> _states = new LinkedList<StateBase>(); // 全てのステート定義
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
+        /// <param name="owner">StateMachineを使用するOwner</param>
         public StateMachine(TOwner owner)
         {
             Owner = owner;
@@ -67,7 +69,7 @@ namespace Sample04
         }
 
         /// <summary>
-        /// イベントIDに対応した遷移情報を登録する
+        /// イベントIDに対応した遷移情報を登録
         /// </summary>
         /// <param name="eventId">イベントID</param>
         /// <typeparam name="TFrom">遷移元ステート</typeparam>
@@ -92,7 +94,7 @@ namespace Sample04
         /// ステート開始処理
         /// </summary>
         /// <typeparam name="T">開始するステート</typeparam>
-        public void Start<T>() where T : StateBase, new()
+        public void OnStart<T>() where T : StateBase, new()
         {
             _currentState = GetOrAdd<T>();
             _currentState.OnStart();
@@ -101,7 +103,7 @@ namespace Sample04
         /// <summary>
         /// ステート更新処理
         /// </summary>
-        public void Update()
+        public void OnUpdate()
         {
             _currentState.OnUpdate();
         }

@@ -6,25 +6,17 @@ namespace Sample03
 {
     using StateBase = StateMachine<Enemy>.StateBase;
     
+    /// <summary>
+    /// Enemyクラス
+    /// StateMachine(クラス定義版)
+    /// </summary>
     public class Enemy : MonoBehaviour
     {
         /// <summary>
         /// ステージ管理クラス
         /// </summary>
-        [SerializeField] private StageManager stageManager;
-        private Vector3 GetSeaPoint()
-        {
-            return stageManager.seaTransform.position;
-        }
-        private Vector3 GetHomePoint()
-        {
-            return stageManager.homeTransform.position;
-        }
-        private GameObject GetFishPrefab()
-        {
-            return stageManager.fishPrefab;
-        }
-        
+        [SerializeField] public StageManager stageManager;
+
         /// <summary>
         /// ステート定義
         /// </summary>
@@ -72,7 +64,7 @@ namespace Sample03
             public override void OnUpdate()
             {
                 var enemyPosition = Owner.transform.position;
-                var targetPosition = Owner.GetSeaPoint();
+                var targetPosition = Owner.stageManager.seaTransform.position;
                 // 海へ到着したら次のステートへ
                 if (Vector3.Distance(enemyPosition, targetPosition) < 0.5f)
                 {
@@ -128,7 +120,7 @@ namespace Sample03
                 yield return new WaitForSeconds(2.0f);
 
                 // 魚取得
-                Instantiate(Owner.GetFishPrefab(), Owner.transform);
+                Instantiate(Owner.stageManager.fishPrefab, Owner.transform);
             
                 // 狩猟完了
                 _isFinishHunting = true;
@@ -146,7 +138,7 @@ namespace Sample03
             public override void OnUpdate()
             {
                 var enemyPosition = Owner.transform.position;
-                var targetPosition = Owner.GetHomePoint();
+                var targetPosition = Owner.stageManager.homeTransform.position;
                 // 家へ到着したら次のステートへ
                 if (Vector3.Distance(enemyPosition, targetPosition) < 0.5f)
                 {
