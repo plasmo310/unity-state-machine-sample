@@ -9,6 +9,19 @@ namespace Sample03
     public class Enemy : MonoBehaviour
     {
         /// <summary>
+        /// ステージ管理クラス
+        /// </summary>
+        [SerializeField] private StageManager stageManager;
+        private Vector3 GetSeaPoint()
+        {
+            return stageManager.seaTransform.position;
+        }
+        private Vector3 GetHomePoint()
+        {
+            return stageManager.homeTransform.position;
+        }
+        
+        /// <summary>
         /// ステート定義
         /// </summary>
         private enum StateType
@@ -19,20 +32,6 @@ namespace Sample03
             Eating,   // 食事
         }
         private StateMachine<Enemy> _stateMachine;
-
-        /// <summary>
-        /// ステージ管理クラス
-        /// </summary>
-        [SerializeField] private StageManager stageManager;
-        private Vector3 GetSeaPoint()
-        {
-            return stageManager.seaTransform.position;
-        }
-        
-        private Vector3 GetHomePoint()
-        {
-            return stageManager.homeTransform.position;
-        }
 
         private void Awake()
         {
@@ -237,7 +236,8 @@ namespace Sample03
 
             // 食事終了
             // 子オブジェクト(魚)を破棄
-            foreach (Transform child in transform) {
+            foreach (Transform child in transform)
+            {
                 Destroy(child.gameObject);
             }
             
