@@ -18,7 +18,7 @@ namespace Sample04
         [SerializeField] private StageManager stageManager;
 
         /// <summary>
-        /// ステート定義
+        /// イベント定義
         /// </summary>
         private enum EventType
         {
