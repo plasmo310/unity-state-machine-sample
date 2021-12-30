@@ -8,7 +8,7 @@ namespace Sample05
     
     /// <summary>
     /// Honeyクラス
-    /// 魚を焼いてくれる
+    /// 魚を受け取って食べるだけの生活
     /// </summary>
     public class Honey : MonoBehaviour
     {

@@ -7,7 +7,7 @@ namespace Sample05
     
     /// <summary>
     /// Enemyクラス
-    /// StateMachine(クラス定義版)
+    /// ハニーのために魚を採り続ける
     /// </summary>
     public class Enemy : MonoBehaviour
     {
