@@ -109,10 +109,11 @@ namespace Sample04
         }
 
         /// <summary>
+        /// イベント発行
         /// 指定されたIDのステートに切り替える
         /// </summary>
         /// <param name="eventId">イベントID</param>
-        public void ChangeState(int eventId)
+        public void DispatchEvent(int eventId)
         {
             // イベントIDからステート取得
             if (!_currentState.Transitions.TryGetValue(eventId, out var nextState))

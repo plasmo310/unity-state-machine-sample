@@ -22,10 +22,10 @@ namespace Sample04
         /// </summary>
         private enum EventType
         {
-            MoveSea,  // 海へ移動
-            Hunting,  // 魚採取
-            MoveHome, // 家へ移動
-            Eating,   // 食事
+            EatFinish,  // 食事終了
+            ArriveSea,  // 海に到着
+            HuntFinish, // 採取完了
+            ArriveHome, // 家に到着
         }
         private StateMachine<Enemy> _stateMachine;
         
@@ -38,10 +38,10 @@ namespace Sample04
         {
             // ステートマシン定義
             _stateMachine = new StateMachine<Enemy>(this);
-            _stateMachine.AddTransition<StateEating, StateMoveSea>((int) EventType.MoveSea);
-            _stateMachine.AddTransition<StateMoveSea, StateHunting>((int) EventType.Hunting);
-            _stateMachine.AddTransition<StateHunting, StateMoveHome>((int) EventType.MoveHome);
-            _stateMachine.AddTransition<StateMoveHome, StateEating>((int) EventType.Eating);
+            _stateMachine.AddTransition<StateEating, StateMoveSea>((int) EventType.EatFinish);
+            _stateMachine.AddTransition<StateMoveSea, StateHunting>((int) EventType.ArriveSea);
+            _stateMachine.AddTransition<StateHunting, StateMoveHome>((int) EventType.HuntFinish);
+            _stateMachine.AddTransition<StateMoveHome, StateEating>((int) EventType.ArriveHome);
             // ステート開始
             _stateMachine.OnStart<StateMoveSea>();
         }
@@ -68,7 +68,7 @@ namespace Sample04
                 // 海へ到着したら次のステートへ
                 if (Vector3.Distance(enemyPosition, targetPosition) < 0.5f)
                 {
-                    StateMachine.ChangeState((int) EventType.Hunting);
+                    StateMachine.DispatchEvent((int) EventType.ArriveSea);
                     return;
                 }
                 // 海へ向かう
@@ -101,7 +101,7 @@ namespace Sample04
                 // 採取が完了したら次のステートへ
                 if (_isFinishHunting)
                 {
-                    StateMachine.ChangeState((int) EventType.MoveHome);
+                    StateMachine.DispatchEvent((int) EventType.HuntFinish);
                 }
             }
 
@@ -142,7 +142,7 @@ namespace Sample04
                 // 家へ到着したら次のステートへ
                 if (Vector3.Distance(enemyPosition, targetPosition) < 0.5f)
                 {
-                    StateMachine.ChangeState((int) EventType.Eating);
+                    StateMachine.DispatchEvent((int) EventType.ArriveHome);
                     return;
                 }
                 // 家へ向かう
@@ -178,7 +178,7 @@ namespace Sample04
                 // 食事が完了したら次のステートへ
                 if (_isFinishEating)
                 {
-                    StateMachine.ChangeState((int) EventType.MoveSea);
+                    StateMachine.DispatchEvent((int) EventType.EatFinish);
                 }
             }
 
